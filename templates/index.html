@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fake Profile Detector</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center">
+  <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-2xl">
+    <h1 class="text-3xl font-bold text-center text-blue-700 mb-4">
+      Instagram Fake Profile Detector
+    </h1>
+    <p class="text-center text-gray-600 mb-6">
+      Fill in the details below (0 = No, 1 = Yes)
+    </p>
+
+    <form id="profileForm" class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="font-medium">Profile Picture Present (1/0)</label>
+        <input type="number" id="profile_pic" class="w-full p-2 border rounded" value="0" />
+      </div>
+      <div>
+        <label class="font-medium">Numbers in Username (0–1)</label>
+        <input type="number" step="0.01" id="username_ratio" class="w-full p-2 border rounded" value="0" />
+      </div>
+      <div>
+        <label class="font-medium">Full Name Word Count</label>
+        <input type="number" id="fullname_words" class="w-full p-2 border rounded" value="0" />
+      </div>
+      <div>
+        <label class="font-medium">Numbers in Full Name (0–1)</label>
+        <input type="number" step="0.01" id="fullname_ratio" class="w-full p-2 border rounded" value="0" />
+      </div>
+      <div>
+        <label class="font-medium">Name Same as Username (1/0)</label>
+        <input type="number" id="name_equals_username" class="w-full p-2 border rounded" value="0" />
+      </div>
+      <div>
+        <label class="font-medium">Bio Length (chars)</label>
+        <input type="number" id="desc_len" class="w-full p-2 border rounded" value="0" />
+      </div>
+      <div>
+        <label class="font-medium">Has External Link (1/0)</label>
+        <input type="number" id="has_url" class="w-full p-2 border rounded" value="0" />
+      </div>
+      <div>
+        <label class="font-medium">Private Account (1/0)</label>
+        <input type="number" id="private" class="w-full p-2 border rounded" value="0" />
+      </div>
+      <div>
+        <label class="font-medium">Number of Posts</label>
+        <input type="number" id="posts" class="w-full p-2 border rounded" value="0" />
+      </div>
+      <div>
+        <label class="font-medium">Number of Followers</label>
+        <input type="number" id="followers" class="w-full p-2 border rounded" value="0" />
+      </div>
+      <div>
+        <label class="font-medium">Number of Follows</label>
+        <input type="number" id="following" class="w-full p-2 border rounded" value="0" />
+      </div>
+    </form>
+
+    <div class="text-center mt-6 flex gap-4 justify-center">
+      <button id="checkBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded">
+        Check Profile
+      </button>
+      <button id="resetBtn" class="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded">
+        Reset
+      </button>
+    </div>
+
+    <div id="result" class="mt-6 hidden text-center">
+      <h2 id="resultText" class="text-2xl font-bold"></h2>
+      <p id="probText" class="text-gray-600 mt-2"></p>
+    </div>
+  </div>
+
+  <script>
+    const fields = [
+      "profile_pic", "username_ratio", "fullname_words", "fullname_ratio",
+      "name_equals_username", "desc_len", "has_url", "private",
+      "posts", "followers", "following"
+    ];
+
+    document.getElementById("checkBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+
+      const data = {};
+      fields.forEach(f => {
+        const val = document.getElementById(f).value.trim();
+        data[f] = val === "" ? 0 : parseFloat(val);
+      });
+
+      const res = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      const json = await res.json();
+      const resultDiv = document.getElementById("result");
+      const resultText = document.getElementById("resultText");
+      const probText = document.getElementById("probText");
+
+      resultDiv.classList.remove("hidden");
+
+      if (json.error) {
+        resultText.textContent = "⚠️ Error: " + json.error;
+        resultText.className = "text-red-600 text-lg font-bold";
+      } else {
+        resultText.textContent = json.result;
+        probText.textContent = `Fake probability: ${json.probability}%`;
+
+        if (json.result === "Fake Profile") {
+          resultText.className = "text-red-600 text-2xl font-bold";
+        } else {
+          resultText.className = "text-green-600 text-2xl font-bold";
+        }
+      }
+    });
+
+    // Reset button clears all fields
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      fields.forEach(f => document.getElementById(f).value = 0);
+      document.getElementById("result").classList.add("hidden");
+    });
+  </script>
+</body>
+</html>
